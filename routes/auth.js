@@ -56,7 +56,32 @@ router.post("/login", async (req, res) => {
   try {
     const { login, password } = req.body;
 
-    // Find user by email or username
+    // For prototype: Allow empty credentials
+    if (!login || !password) {
+      // Return a demo user token
+      const demoToken = jwt.sign(
+        {
+          userId: "demo",
+          username: "demo_user",
+          role: "admin", // Adding admin role for full access
+        },
+        "your_jwt_secret",
+        { expiresIn: "7d" }
+      );
+
+      return res.json({
+        message: "Demo login successful",
+        token: demoToken,
+        user: {
+          id: "demo",
+          username: "demo_user",
+          email: "demo@example.com",
+          role: "admin",
+        },
+      });
+    }
+
+    // Regular login flow for non-empty credentials
     const user = await User.findOne({
       $or: [{ email: login.toLowerCase() }, { username: login }],
     });
@@ -76,11 +101,9 @@ router.post("/login", async (req, res) => {
     }
 
     // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      "your_jwt_secret", // This should be in an environment variable
-      { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ userId: user._id }, "your_jwt_secret", {
+      expiresIn: "7d",
+    });
 
     res.json({
       message: "Login successful",
