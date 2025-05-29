@@ -49,4 +49,52 @@ router.post("/signup", async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/login
+// @desc    Authenticate user & get token
+// @access  Public
+router.post("/login", async (req, res) => {
+  try {
+    const { login, password } = req.body;
+
+    // Find user by email or username
+    const user = await User.findOne({
+      $or: [{ email: login.toLowerCase() }, { username: login }],
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid credentials",
+      });
+    }
+
+    // Check password
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Invalid credentials",
+      });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { userId: user._id },
+      "your_jwt_secret", // This should be in an environment variable
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
